@@ -1,6 +1,5 @@
 package home_explorer;
 
-import home_explorer.exception.InvalidCommandException;
 import home_explorer.exception.ItemException;
 
 import java.io.Serializable;
@@ -17,35 +16,35 @@ public class Explorer implements Serializable {
         this.current = root;
     }
 
-    public void commandParser(String command){
-        String[] tokens = command.split(" ");
+    protected void cd(String path){
         try {
-            switch (tokens[0]){
-                case "cd":      checkCommand(tokens, new int[]{2}); cd(tokens[1]); break;
-                case "pwd":     checkCommand(tokens, new int[]{1}); pwd(); break;
-                case "ls":      checkCommand(tokens, new int[]{1}); ls(); break;
-                case "mkdir":   checkCommand(tokens, new int[]{2}); mkdir(tokens[1]); break;
-                case "touch":   checkCommand(tokens, new int[]{2}); touch(tokens[1]); break;
-                case "save":    checkCommand(tokens, new int[]{1}); save(); break;
-                case "exit":    checkCommand(tokens, new int[]{1}); System.exit(0); break;
-                default:        throw new InvalidCommandException("Unknown command.");
-            }
-        }catch (Exception e){
-            System.out.println(e.getMessage());
+            current = (Folder) pathParser(path);
+        }catch (ClassCastException e){
+            throw new ItemException("Item '" + pathParser(path).getName() + "' is not a folder.");
         }
     }
 
-    private void checkCommand(String[] tokens, int[] len){
-        boolean valid = false;
-        for (int j : len) {
-            if (tokens.length == j) {
-                valid = true;
-                break;
-            }
+    protected void ls(){
+        StringBuffer sb = new StringBuffer();
+        for(Item item : current.getContents()){
+            sb.append(item.getName()).append(" ");
         }
-        if(!valid){
-            throw new InvalidCommandException("Invalid command usage.");
-        }
+        System.out.println(sb);
+    }
+
+    protected void pwd(){
+        System.out.println(current.getPath());
+    }
+
+    protected void mkdir(String name) {
+        Folder folder = new Folder(name, current);
+        current.add(folder);
+    }
+
+    protected void touch(String name){
+        File file = new File(name, current);
+        current.add(file);
+        addToFileList(file);
     }
 
     private Item pathParser(String path){
@@ -73,37 +72,6 @@ public class Explorer implements Serializable {
         return cur;
     }
 
-    private void cd(String path){
-        try {
-            current = (Folder) pathParser(path);
-        }catch (ClassCastException e){
-            throw new ItemException("Item '" + pathParser(path).getName() + "' is not a folder.");
-        }
-    }
-
-    private void ls(){
-        StringBuffer sb = new StringBuffer();
-        for(Item item : current.getContents()){
-            sb.append(item.getName()).append(" ");
-        }
-        System.out.println(sb);
-    }
-
-    private void pwd(){
-        System.out.println(current.getPath());
-    }
-
-    private void mkdir(String name) {
-        Folder folder = new Folder(name, current);
-        current.add(folder);
-    }
-
-    private void touch(String name){
-        File file = new File(name, current);
-        current.add(file);
-        addToFileList(file);
-    }
-
     private void addToFileList(File file){
         int left = 0;
         int right = files.size() - 1;
@@ -122,14 +90,6 @@ public class Explorer implements Serializable {
             left++;
         }
         files.add(left, file);
-    }
-
-    private void save(){
-        System.out.println(Serializer.objectToString(this));
-    }
-
-    private void load(String str){
-        // TODO
     }
 
     private void searchByName(Item item, String name){
